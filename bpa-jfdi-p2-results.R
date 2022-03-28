@@ -1,0 +1,316 @@
+#' Main functions for generating plots for the BLOODPAC JFDI
+#' publication.
+require(tidyverse)
+require(ggpubr)
+require(combinat)
+
+source("utils/jfdi-utils.R")
+
+# Commandline options and parsing
+args <- commandArgs(trailingOnly = TRUE)
+
+# validate
+if(length(args) != 1) {
+  stop("Usage: Rscript bpa-jfdi-p2-results.R <input-data.csv>\nYou must provide the path to the input CSV.")
+}
+
+input.csv <- args[1]
+if(!file.exists(input.csv)) {
+  stop(paste("Unable to find input CSV:", input.csv, ". Make sure file exists."))
+}
+
+## Load dataset
+message(paste("Loading data set", input.csv, "..."))
+jfdi.detect <- read.csv(input.csv, stringsAsFactors = FALSE, na.strings=c("NA", "")) %>%
+  mutate(expected_af=forcats::fct_relevel(expected_af, c("WT", "0.1%", "0.5%", "1.0%", "5.0%")))
+
+## Setup output directories
+dir.create("figures/", showWarnings = FALSE, recursive = TRUE)
+
+## figures
+
+#' do.fig02
+#' Generates the figure showing boxplots of observed AF across the experiment.
+#'
+#' @return figure 02 from publication
+do.fig02 <- function(){
+  jfdi.fig02.a <- jfdi.detect %>%
+    filter(!is.na(Observed) & sequencing_platform != "dPCR" & contrived_source=="Horizon") %>%
+    rename(Participant=participant) %>%
+    ggboxplot(x="expected_af", y="observed_af_pct", color="Participant",
+              palette="jco",
+              facet.by = c("dna_source", "contrived_source"),
+              ggtheme = theme_pubclean(base_size=8),
+              ylab="Observed VAF (%)",
+              xlab="Expected VAF")
+
+  jfdi.fig02.b <- jfdi.detect %>%
+    filter(!is.na(Observed) & sequencing_platform != "dPCR" & contrived_source=="SeraCare") %>%
+    rename(Participant=participant) %>%
+    ggboxplot(x="expected_af", y="observed_af_pct", color="Participant",
+              palette="jco",
+              facet.by = c("dna_source", "contrived_source"),
+              ggtheme = theme_pubclean(base_size=8),
+              ylab="Observed VAF (%)",
+              xlab="Expected VAF")
+  fig <- ggarrange(
+    jfdi.fig02.a,
+    jfdi.fig02.b,
+    ncol=2,
+    common.legend = TRUE
+  )
+  return(fig)
+}
+
+#' do.fig03
+#' Subsets the dataframe to variants covered by both plasma and dna formats within a
+#' participant and is covered by at least 2 participants.
+#'
+#' @return figure 03
+do.fig03 <- function(){
+  sel <- jfdi.detect %>%
+    filter(!(is.na(Observed)) & sequencing_platform != "dPCR") %>%
+    distinct(contrived_source, dna_source, expected_af, participant) %>%
+    count(contrived_source, expected_af, participant) %>%
+    filter(n==2) %>%
+    select(-n)
+
+  sel.plasma <- jfdi.detect %>%
+    filter(!(is.na(Observed)) & sequencing_platform != "dPCR" & dna_source == "Plasma") %>%
+    inner_join(sel) %>%
+    distinct(contrived_source, expected_af, variant, participant) %>%
+    count(contrived_source, expected_af, variant)
+
+  sel.dna_source <- jfdi.detect %>%
+    filter(!(is.na(Observed)) & sequencing_platform != "dPCR" & dna_source == "DNA") %>%
+    inner_join(sel) %>%
+    distinct(contrived_source, expected_af, variant, participant) %>%
+    count(contrived_source, expected_af, variant) %>%
+    inner_join(sel.plasma) %>%
+    ungroup() %>%
+    filter(n>2)
+
+  jfdi.fig03.a <- jfdi.detect %>%
+    filter(!(is.na(Observed)) & sequencing_platform != "dPCR" & contrived_source == "Horizon") %>%
+    inner_join(sel) %>%
+    inner_join(sel.dna_source) %>%
+    rename(`DNA Source`=dna_source) %>%
+    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Source",
+              palette="jco", facet.by=c("expected_af", "contrived_source"),
+              scales="free",
+              add="mean_se",
+              position=position_dodge(0.8),
+              ggtheme=theme_pubclean(base_size=8),
+              ylab=FALSE,
+              xlab=FALSE) +
+    rotate_x_text(angle=45)
+
+  jfdi.fig03.b <- jfdi.detect %>%
+    filter(!(is.na(Observed)) & sequencing_platform != "dPCR" & contrived_source == "SeraCare") %>%
+    inner_join(sel) %>%
+    inner_join(sel.dna_source) %>%
+    rename(`DNA Source`=dna_source) %>%
+    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Source",
+              palette="jco", facet.by=c("expected_af", "contrived_source"),
+              scales="free",
+              add="mean_se",
+              position=position_dodge(0.8),
+              ggtheme=theme_pubclean(base_size=8),
+              ylab=FALSE,
+              xlab=FALSE) +
+    rotate_x_text(angle=45)
+
+  ggarrange(
+    jfdi.fig03.a,
+    jfdi.fig03.b,
+    ncol=2,
+    common.legend = TRUE,
+    widths = c(0.4, 0.6)
+  ) %>% annotate_figure(left=text_grob("Observed VAF (%)", rot=90, size = 8))
+}
+
+#' do.fig04
+#' Loads the sensitivity and specificity data frames; Fills in some missing data as NAs for
+#' participant c; generates plots
+#'
+#' @return Figure 04
+do.fig04 <- function(){
+  jfdi.sensitivity <- get.sensitivity.dataframe(jfdi.detect %>% filter(sequencing_platform != "dPCR"))
+  jfdi.specificity <- get.specificity.dataframe(jfdi.detect %>% filter(sequencing_platform != "dPCR"))
+
+  ## Group by sens and spec, seracare plasma/seracare dna etc.
+  c.meta <- jfdi.sensitivity %>%
+    filter(participant == "c") %>%
+    distinct(participant, sequencing_platform, library_method, contrived_source, dna_source)
+  c.meta$expected_af <- "WT"
+  c.meta$sample_replicate <- NA
+  c.meta$total <- NA
+  c.meta$TN <- NA
+  c.meta$FP <- NA
+  c.meta$FPR <- NA
+  c.meta$TNR <- NA
+
+  jfdi.specificity.2 <- rbind(jfdi.specificity, c.meta)
+
+  jfdi.fig04.a <- jfdi.sensitivity %>%
+    filter(contrived_source == "Horizon") %>%
+    rename(`DNA Source`=dna_source) %>%
+    mutate(sample_replicate=as.factor(sample_replicate)) %>%
+    ggline(x="expected_af", y="TPR", color="DNA Source",
+           fill="DNA Source",
+           palette="jco",
+           ggtheme=theme_pubclean(base_size=8),
+           facet.by = "participant",
+           add="mean_se",
+           ylab="Sensitivity", xlab=FALSE,
+           nrow=1) +
+    theme(panel.grid = element_blank(),
+          strip.text.y = element_text(angle = 270, face = "bold"),
+          strip.placement = "outside")
+
+  jfdi.fig04.b <- jfdi.specificity.2 %>%
+    filter(contrived_source == "Horizon") %>%
+    rename(`DNA Source`=dna_source) %>%
+    ggbarplot(x='DNA Source', y='TNR', fill='DNA Source',
+              palette="jco",
+              ggtheme=theme_pubclean(base_size=8),
+              facet.by = "participant",
+              add="mean_se", nrow=1, ylab="Specificity", xlab=FALSE) +
+    theme(panel.grid = element_blank(),
+          strip.text.y = element_text(angle = 270, face = "bold"),
+          strip.placement = "outside")
+
+  jfdi.fig04.c <- jfdi.sensitivity %>%
+    filter(contrived_source == "SeraCare") %>%
+    rename(`DNA Source`=dna_source) %>%
+    mutate(sample_replicate=as.factor(sample_replicate)) %>%
+    ggline(x="expected_af", y="TPR", color="DNA Source",
+           fill="DNA Source",
+           palette="jco",
+           ggtheme=theme_pubclean(base_size=8),
+           facet.by = "participant",
+           add="mean_se",
+           ylab="Sensitivity", xlab=FALSE,
+           scales="free_x",
+           nrow=1) +
+    theme(panel.grid = element_blank(),
+          strip.text.y = element_text(angle = 270, face = "bold"),
+          strip.placement = "outside")
+  jfdi.fig04.d <- jfdi.specificity.2 %>%
+    filter(contrived_source == "SeraCare") %>%
+    rename(`DNA Source`=dna_source) %>%
+    ggbarplot(x='DNA Source', y='TNR', fill='DNA Source',
+              palette="jco",
+              ggtheme=theme_pubclean(base_size=8),
+              facet.by = "participant",
+              add="mean_se", nrow=1, ylab="Specificity", xlab=FALSE) +
+    theme(panel.grid = element_blank(),
+          strip.text.y = element_text(angle = 270, face = "bold"),
+          strip.placement = "outside")
+
+  ggarrange(ggarrange(jfdi.fig04.a,
+                      jfdi.fig04.b,
+                      nrow = 2,
+                      common.legend=TRUE),
+            ggarrange(jfdi.fig04.c, jfdi.fig04.d, nrow=2, common.legend=TRUE),
+            ncol=1,
+            labels = c("Horizon", "SeraCare"),
+            font.label = list(size=8),
+            common.legend = TRUE)
+
+}
+
+#' do.fig05
+#' Creates metadata df; loads w/i and b/w concordance; merges into a single df; generates plot
+#'
+#' @return figure 05
+do.fig05 <- function(){
+  # Metadata to add back
+  lib.meta <- jfdi.detect %>% distinct(participant, library_method, sequencing_platform)
+  jfdi.wi.concordance <- get.within.concordance.df(jfdi.detect %>%
+                                                     filter(expected_af != "WT" & sequencing_platform != "dPCR")) %>%
+    inner_join(lib.meta)
+  jfdi.bw.concordance <- get.between.concordance.df(jfdi.detect %>%
+                                                      filter(expected_af != "WT" & sequencing_platform != "dPCR"))
+
+
+  jfdi.bw.concordance.fmt <- jfdi.bw.concordance %>%
+    mutate(comparison="cross-participant") %>%
+    inner_join(lib.meta, by=c("participant.a"="participant")) %>%
+    select(contrived_source, dna_source, sequencing_platform, library_method, participant.a, participant.b, comparison, expected_af, rc)
+
+  jfdi.wi.concordance.fmt <- jfdi.wi.concordance %>%
+    mutate(participant.a=participant, participant.b=participant, comparison="intra-participant") %>%
+    select(contrived_source, dna_source, sequencing_platform, library_method, participant.a, participant.b, comparison, expected_af, rc)
+
+  jfdi.concord.combined <- rbind(jfdi.bw.concordance.fmt, jfdi.wi.concordance.fmt) %>%
+    mutate(comparison=factor(comparison, levels=c("intra-participant", "cross-participant")))
+
+  jfdi.fig.05.a <- jfdi.concord.combined %>%
+    filter(contrived_source == "Horizon") %>%
+    rename(Grouping=comparison) %>%
+    ggline(x="expected_af", y="rc", color="Grouping",
+           palette="jco",
+           facet.by=c("dna_source", "participant.a"),
+           ggtheme=theme_pubclean(base_size=8),
+           add="mean_se",
+           ylab="Concordance",
+           xlab=FALSE) +
+    theme(panel.grid = element_blank(),
+          strip.text.y = element_text(angle = 270, face = "bold"),
+          strip.placement = "outside")
+
+  jfdi.fig.05.b <- jfdi.concord.combined %>%
+    filter(contrived_source == "SeraCare") %>%
+    rename(Grouping=comparison) %>%
+    ggline(x="expected_af", y="rc", color="Grouping",
+           palette="jco",
+           facet.by=c("dna_source", "participant.a"),
+           ggtheme=theme_pubclean(base_size=8),
+           add="mean_se",
+           ylab="Concordance",
+           xlab=FALSE) +
+    theme(panel.grid = element_blank(),
+          strip.text.y = element_text(angle = 270, face = "bold"),
+          strip.placement = "outside")
+
+  ggarrange(ggarrange(jfdi.fig.05.a),
+            ggarrange(jfdi.fig.05.b),
+            nrow = 2,
+            common.legend=TRUE,
+            labels = c("Horizon", "SeraCare"),
+            font.label=list(size=8))
+}
+
+# Stop pesky Rplots.pdf from being generated
+if(!interactive()) pdf(NULL)
+message("Creating figures/jfdi.fig02.png ...")
+jfdi.fig02 <- do.fig02()
+ggsave("jfdi.fig02.png",
+       plot=jfdi.fig02,
+       path="figures",
+       width=6, height=4, scale=1.4)
+
+message("Creating figures/jfdi.fig03.png ...")
+jfdi.fig03 <- do.fig03()
+ggsave("jfdi.fig03.png",
+       plot=jfdi.fig03,
+       path="figures",
+       width=6, height=4, scale=1.4)
+
+message("Creating figures/jfdi.fig04.png ...")
+jfdi.fig04 <- do.fig04()
+ggsave("jfdi.fig04.png",
+       plot=jfdi.fig04,
+       path="figures",
+       width=6, height=4, scale=1.4)
+
+message("Creating figures/jfdi.fig05.png ...")
+jfdi.fig05 <- do.fig05()
+ggsave("jfdi.fig05.png",
+       plot=jfdi.fig05,
+       path="figures",
+       width=6, height=4, scale=1.4)
+
+message("Done. All figures generated.")
+print(sessionInfo())
