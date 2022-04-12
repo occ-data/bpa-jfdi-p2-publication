@@ -26,6 +26,7 @@ jfdi.detect <- read.csv(input.csv, stringsAsFactors = FALSE, na.strings=c("NA", 
 
 ## Setup output directories
 dir.create("figures/", showWarnings = FALSE, recursive = TRUE)
+dir.create("csvs/", showWarnings = FALSE, recursive = TRUE)
 
 ## figures
 
@@ -94,8 +95,8 @@ do.fig03 <- function(){
     filter(!(is.na(Observed)) & sequencing_platform != "dPCR" & contrived_source == "Horizon") %>%
     inner_join(sel) %>%
     inner_join(sel.dna_source) %>%
-    rename(`DNA Source`=dna_source) %>%
-    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Source",
+    rename(`DNA Format`=dna_source) %>%
+    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Format",
               palette="jco", facet.by=c("expected_af", "contrived_source"),
               scales="free",
               add="mean_se",
@@ -109,8 +110,8 @@ do.fig03 <- function(){
     filter(!(is.na(Observed)) & sequencing_platform != "dPCR" & contrived_source == "SeraCare") %>%
     inner_join(sel) %>%
     inner_join(sel.dna_source) %>%
-    rename(`DNA Source`=dna_source) %>%
-    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Source",
+    rename(`DNA Format`=dna_source) %>%
+    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Format",
               palette="jco", facet.by=c("expected_af", "contrived_source"),
               scales="free",
               add="mean_se",
@@ -154,10 +155,10 @@ do.fig04 <- function(){
 
   jfdi.fig04.a <- jfdi.sensitivity %>%
     filter(contrived_source == "Horizon") %>%
-    rename(`DNA Source`=dna_source) %>%
+    rename(`DNA Format`=dna_source) %>%
     mutate(sample_replicate=as.factor(sample_replicate)) %>%
-    ggline(x="expected_af", y="TPR", color="DNA Source",
-           fill="DNA Source",
+    ggline(x="expected_af", y="TPR", color="DNA Format",
+           fill="DNA Format",
            palette="jco",
            ggtheme=theme_pubclean(base_size=8),
            facet.by = "participant",
@@ -170,8 +171,8 @@ do.fig04 <- function(){
 
   jfdi.fig04.b <- jfdi.specificity.2 %>%
     filter(contrived_source == "Horizon") %>%
-    rename(`DNA Source`=dna_source) %>%
-    ggbarplot(x='DNA Source', y='TNR', fill='DNA Source',
+    rename(`DNA Format`=dna_source) %>%
+    ggbarplot(x='DNA Format', y='TNR', fill='DNA Format',
               palette="jco",
               ggtheme=theme_pubclean(base_size=8),
               facet.by = "participant",
@@ -182,10 +183,10 @@ do.fig04 <- function(){
 
   jfdi.fig04.c <- jfdi.sensitivity %>%
     filter(contrived_source == "SeraCare") %>%
-    rename(`DNA Source`=dna_source) %>%
+    rename(`DNA Format`=dna_source) %>%
     mutate(sample_replicate=as.factor(sample_replicate)) %>%
-    ggline(x="expected_af", y="TPR", color="DNA Source",
-           fill="DNA Source",
+    ggline(x="expected_af", y="TPR", color="DNA Format",
+           fill="DNA Format",
            palette="jco",
            ggtheme=theme_pubclean(base_size=8),
            facet.by = "participant",
@@ -198,8 +199,8 @@ do.fig04 <- function(){
           strip.placement = "outside")
   jfdi.fig04.d <- jfdi.specificity.2 %>%
     filter(contrived_source == "SeraCare") %>%
-    rename(`DNA Source`=dna_source) %>%
-    ggbarplot(x='DNA Source', y='TNR', fill='DNA Source',
+    rename(`DNA Format`=dna_source) %>%
+    ggbarplot(x='DNA Format', y='TNR', fill='DNA Format',
               palette="jco",
               ggtheme=theme_pubclean(base_size=8),
               facet.by = "participant",
@@ -311,6 +312,35 @@ ggsave("jfdi.fig05.png",
        plot=jfdi.fig05,
        path="figures",
        width=6, height=4, scale=1.4)
+message("All figures generated.")
 
-message("Done. All figures generated.")
+message("Creating csvs/jfdi.table_S3.csv ...")
+jfdi.detect %>%
+  dplyr::filter(!is.na(Observed) & participant != "i") %>%
+  dplyr::distinct(contrived_source, dna_source, expected_af, variant, participant) %>%
+  dplyr::count(contrived_source, dna_source, expected_af, participant) %>%
+  tidyr::pivot_wider(names_from=expected_af, values_from = n, values_fill = NA) %>%
+  dplyr::arrange(contrived_source, dna_source, participant) %>%
+  write.csv(file="csvs/jfdi.table_S3.csv", row.names=FALSE, na="NA")
+
+message("Creating csvs/jfdi.table_S4.csv ...")
+jfdi.detect %>%
+  dplyr::filter(!is.na(Observed) & participant != "i") %>%
+  dplyr::distinct(contrived_source, dna_source, expected_af, participant) %>%
+  dplyr::count(contrived_source, expected_af, dna_source) %>%
+  tidyr::pivot_wider(names_from=expected_af, values_from = n, values_fill = NA) %>%
+  dplyr::arrange(contrived_source, dna_source) %>%
+  write.csv(file="csvs/jfdi.table_S4.csv", row.names=FALSE, na="NA")
+
+message("Creating csvs/jfdi.table_S5.csv ...")
+jfdi.detect %>%
+  dplyr::filter(!is.na(Observed) & participant != "i") %>%
+  dplyr::distinct(contrived_source, dna_source, expected_af, variant, participant) %>%
+  dplyr::count(contrived_source, dna_source, expected_af, variant) %>%
+  tidyr::pivot_wider(names_from=expected_af, values_from = n, values_fill = NA) %>%
+  dplyr::arrange(contrived_source, dna_source, variant) %>%
+  write.csv(file="csvs/jfdi.table_S5.csv", row.names=FALSE, na="NA")
+
+message("Done. All supplemental csvs generated.")
+
 print(sessionInfo())
