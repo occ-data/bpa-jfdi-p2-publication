@@ -94,8 +94,8 @@ do.fig03 <- function(){
     filter(!(is.na(Observed)) & sequencing_platform != "dPCR" & contrived_source == "Horizon") %>%
     inner_join(sel) %>%
     inner_join(sel.dna_source) %>%
-    rename(`DNA Source`=dna_source) %>%
-    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Source",
+    rename(`DNA Format`=dna_source) %>%
+    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Format",
               palette="jco", facet.by=c("expected_af", "contrived_source"),
               scales="free",
               add="mean_se",
@@ -109,8 +109,8 @@ do.fig03 <- function(){
     filter(!(is.na(Observed)) & sequencing_platform != "dPCR" & contrived_source == "SeraCare") %>%
     inner_join(sel) %>%
     inner_join(sel.dna_source) %>%
-    rename(`DNA Source`=dna_source) %>%
-    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Source",
+    rename(`DNA Format`=dna_source) %>%
+    ggbarplot(x="variant", y="observed_af_pct", fill="DNA Format",
               palette="jco", facet.by=c("expected_af", "contrived_source"),
               scales="free",
               add="mean_se",
@@ -154,10 +154,10 @@ do.fig04 <- function(){
 
   jfdi.fig04.a <- jfdi.sensitivity %>%
     filter(contrived_source == "Horizon") %>%
-    rename(`DNA Source`=dna_source) %>%
+    rename(`DNA Format`=dna_source) %>%
     mutate(sample_replicate=as.factor(sample_replicate)) %>%
-    ggline(x="expected_af", y="TPR", color="DNA Source",
-           fill="DNA Source",
+    ggline(x="expected_af", y="TPR", color="DNA Format",
+           fill="DNA Format",
            palette="jco",
            ggtheme=theme_pubclean(base_size=8),
            facet.by = "participant",
@@ -170,8 +170,8 @@ do.fig04 <- function(){
 
   jfdi.fig04.b <- jfdi.specificity.2 %>%
     filter(contrived_source == "Horizon") %>%
-    rename(`DNA Source`=dna_source) %>%
-    ggbarplot(x='DNA Source', y='TNR', fill='DNA Source',
+    rename(`DNA Format`=dna_source) %>%
+    ggbarplot(x='DNA Format', y='TNR', fill='DNA Format',
               palette="jco",
               ggtheme=theme_pubclean(base_size=8),
               facet.by = "participant",
@@ -182,10 +182,10 @@ do.fig04 <- function(){
 
   jfdi.fig04.c <- jfdi.sensitivity %>%
     filter(contrived_source == "SeraCare") %>%
-    rename(`DNA Source`=dna_source) %>%
+    rename(`DNA Format`=dna_source) %>%
     mutate(sample_replicate=as.factor(sample_replicate)) %>%
-    ggline(x="expected_af", y="TPR", color="DNA Source",
-           fill="DNA Source",
+    ggline(x="expected_af", y="TPR", color="DNA Format",
+           fill="DNA Format",
            palette="jco",
            ggtheme=theme_pubclean(base_size=8),
            facet.by = "participant",
@@ -198,8 +198,8 @@ do.fig04 <- function(){
           strip.placement = "outside")
   jfdi.fig04.d <- jfdi.specificity.2 %>%
     filter(contrived_source == "SeraCare") %>%
-    rename(`DNA Source`=dna_source) %>%
-    ggbarplot(x='DNA Source', y='TNR', fill='DNA Source',
+    rename(`DNA Format`=dna_source) %>%
+    ggbarplot(x='DNA Format', y='TNR', fill='DNA Format',
               palette="jco",
               ggtheme=theme_pubclean(base_size=8),
               facet.by = "participant",
