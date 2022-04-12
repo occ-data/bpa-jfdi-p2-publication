@@ -153,3 +153,4 @@ cython_debug/
 
 # R stuff
 figures/
+csvs/
