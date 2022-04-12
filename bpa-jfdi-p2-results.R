@@ -26,6 +26,7 @@ jfdi.detect <- read.csv(input.csv, stringsAsFactors = FALSE, na.strings=c("NA", 
 
 ## Setup output directories
 dir.create("figures/", showWarnings = FALSE, recursive = TRUE)
+dir.create("csvs/", showWarnings = FALSE, recursive = TRUE)
 
 ## figures
 
@@ -311,6 +312,35 @@ ggsave("jfdi.fig05.png",
        plot=jfdi.fig05,
        path="figures",
        width=6, height=4, scale=1.4)
+message("All figures generated.")
 
-message("Done. All figures generated.")
+message("Creating csvs/jfdi.table_S3.csv ...")
+jfdi.detect %>%
+  dplyr::filter(!is.na(Observed) & participant != "i") %>%
+  dplyr::distinct(contrived_source, dna_source, expected_af, variant, participant) %>%
+  dplyr::count(contrived_source, dna_source, expected_af, participant) %>%
+  tidyr::pivot_wider(names_from=expected_af, values_from = n, values_fill = NA) %>%
+  dplyr::arrange(contrived_source, dna_source, participant) %>%
+  write.csv(file="csvs/jfdi.table_S3.csv", row.names=FALSE, na="NA")
+
+message("Creating csvs/jfdi.table_S4.csv ...")
+jfdi.detect %>%
+  dplyr::filter(!is.na(Observed) & participant != "i") %>%
+  dplyr::distinct(contrived_source, dna_source, expected_af, participant) %>%
+  dplyr::count(contrived_source, expected_af, dna_source) %>%
+  tidyr::pivot_wider(names_from=expected_af, values_from = n, values_fill = NA) %>%
+  dplyr::arrange(contrived_source, dna_source) %>%
+  write.csv(file="csvs/jfdi.table_S4.csv", row.names=FALSE, na="NA")
+
+message("Creating csvs/jfdi.table_S5.csv ...")
+jfdi.detect %>%
+  dplyr::filter(!is.na(Observed) & participant != "i") %>%
+  dplyr::distinct(contrived_source, dna_source, expected_af, variant, participant) %>%
+  dplyr::count(contrived_source, dna_source, expected_af, variant) %>%
+  tidyr::pivot_wider(names_from=expected_af, values_from = n, values_fill = NA) %>%
+  dplyr::arrange(contrived_source, dna_source, variant) %>%
+  write.csv(file="csvs/jfdi.table_S5.csv", row.names=FALSE, na="NA")
+
+message("Done. All supplemental csvs generated.")
+
 print(sessionInfo())
