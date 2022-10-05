@@ -29,6 +29,9 @@ dir.create("figures/", showWarnings = FALSE, recursive = TRUE)
 dir.create("csvs/", showWarnings = FALSE, recursive = TRUE)
 
 ## figures
+BaseSize <- 6
+PointSize <- 0.07
+ColorPalette <- c("#969696","#000000")
 
 #' do.fig02
 #' Generates the figure showing boxplots of observed AF across the experiment.
@@ -40,20 +43,34 @@ do.fig02 <- function(){
     rename(Participant=participant) %>%
     ggboxplot(x="expected_af", y="observed_af_pct", color="Participant",
               palette="jco",
+              outlier.size=0.2,
+              size=0.2,
               facet.by = c("dna_source", "contrived_source"),
-              ggtheme = theme_pubclean(base_size=8),
+              ggtheme = theme_pubclean(base_size=5),
               ylab="Observed VAF (%)",
-              xlab="Expected VAF")
+              xlab="Expected VAF") +
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
 
   jfdi.fig02.b <- jfdi.detect %>%
     filter(!is.na(Observed) & sequencing_platform != "dPCR" & contrived_source=="SeraCare") %>%
     rename(Participant=participant) %>%
     ggboxplot(x="expected_af", y="observed_af_pct", color="Participant",
               palette="jco",
+              outlier.size=0.2,
+              size=0.2,
               facet.by = c("dna_source", "contrived_source"),
-              ggtheme = theme_pubclean(base_size=8),
+              ggtheme = theme_pubclean(base_size=5),
               ylab="Observed VAF (%)",
-              xlab="Expected VAF")
+              xlab="Expected VAF") +
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
   fig <- ggarrange(
     jfdi.fig02.a,
     jfdi.fig02.b,
@@ -97,14 +114,21 @@ do.fig03 <- function(){
     inner_join(sel.dna_source) %>%
     rename(`DNA Format`=dna_source) %>%
     ggbarplot(x="variant", y="observed_af_pct", fill="DNA Format",
-              palette="jco", facet.by=c("expected_af", "contrived_source"),
+              palette=ColorPalette, facet.by=c("expected_af", "contrived_source"),
               scales="free",
               add="mean_se",
+              add.params=list(size=.2),
+              size=.2,
               position=position_dodge(0.8),
-              ggtheme=theme_pubclean(base_size=8),
+              ggtheme=theme_pubclean(base_size=BaseSize),
               ylab=FALSE,
               xlab=FALSE) +
-    rotate_x_text(angle=45)
+    rotate_x_text(angle=45) +
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
 
   jfdi.fig03.b <- jfdi.detect %>%
     filter(!(is.na(Observed)) & sequencing_platform != "dPCR" & contrived_source == "SeraCare") %>%
@@ -112,14 +136,21 @@ do.fig03 <- function(){
     inner_join(sel.dna_source) %>%
     rename(`DNA Format`=dna_source) %>%
     ggbarplot(x="variant", y="observed_af_pct", fill="DNA Format",
-              palette="jco", facet.by=c("expected_af", "contrived_source"),
+              palette=ColorPalette, facet.by=c("expected_af", "contrived_source"),
               scales="free",
               add="mean_se",
+              add.params=list(size=.2),
+              size=.2,
               position=position_dodge(0.8),
-              ggtheme=theme_pubclean(base_size=8),
+              ggtheme=theme_pubclean(base_size=BaseSize),
               ylab=FALSE,
               xlab=FALSE) +
-    rotate_x_text(angle=45)
+    rotate_x_text(angle=45) +
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
 
   ggarrange(
     jfdi.fig03.a,
@@ -157,57 +188,71 @@ do.fig04 <- function(){
     filter(contrived_source == "Horizon") %>%
     rename(`DNA Format`=dna_source) %>%
     mutate(sample_replicate=as.factor(sample_replicate)) %>%
-    ggline(x="expected_af", y="TPR", color="DNA Format",
-           fill="DNA Format",
-           palette="jco",
-           ggtheme=theme_pubclean(base_size=8),
+    ggline(x="expected_af", y="TPR", linetype="DNA Format",
+           ggtheme=theme_pubclean(base_size=BaseSize),
            facet.by = "participant",
+           point.size=PointSize,
+           shape="DNA Format",
+           size=.3,
            add="mean_se",
            ylab="Sensitivity", xlab=FALSE,
            nrow=1) +
-    theme(panel.grid = element_blank(),
-          strip.text.y = element_text(angle = 270, face = "bold"),
-          strip.placement = "outside")
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
 
   jfdi.fig04.b <- jfdi.specificity.2 %>%
     filter(contrived_source == "Horizon") %>%
     rename(`DNA Format`=dna_source) %>%
     ggbarplot(x='DNA Format', y='TNR', fill='DNA Format',
-              palette="jco",
-              ggtheme=theme_pubclean(base_size=8),
+              palette=ColorPalette,
+              ggtheme=theme_pubclean(base_size=BaseSize),
+              size=.2,
               facet.by = "participant",
               add="mean_se", nrow=1, ylab="Specificity", xlab=FALSE) +
-    theme(panel.grid = element_blank(),
-          strip.text.y = element_text(angle = 270, face = "bold"),
-          strip.placement = "outside")
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
 
   jfdi.fig04.c <- jfdi.sensitivity %>%
     filter(contrived_source == "SeraCare") %>%
     rename(`DNA Format`=dna_source) %>%
     mutate(sample_replicate=as.factor(sample_replicate)) %>%
-    ggline(x="expected_af", y="TPR", color="DNA Format",
-           fill="DNA Format",
-           palette="jco",
-           ggtheme=theme_pubclean(base_size=8),
+    ggline(x="expected_af", y="TPR", linetype="DNA Format",
+           palette=ColorPalette,
+           ggtheme=theme_pubclean(base_size=BaseSize),
+           size=.3,
            facet.by = "participant",
+           point.size=PointSize,
+           shape="DNA Format",
            add="mean_se",
            ylab="Sensitivity", xlab=FALSE,
            scales="free_x",
            nrow=1) +
-    theme(panel.grid = element_blank(),
-          strip.text.y = element_text(angle = 270, face = "bold"),
-          strip.placement = "outside")
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
+
   jfdi.fig04.d <- jfdi.specificity.2 %>%
     filter(contrived_source == "SeraCare") %>%
     rename(`DNA Format`=dna_source) %>%
     ggbarplot(x='DNA Format', y='TNR', fill='DNA Format',
-              palette="jco",
-              ggtheme=theme_pubclean(base_size=8),
+              palette=ColorPalette,
+              ggtheme=theme_pubclean(base_size=BaseSize),
+              size=.2,
               facet.by = "participant",
               add="mean_se", nrow=1, ylab="Specificity", xlab=FALSE) +
-    theme(panel.grid = element_blank(),
-          strip.text.y = element_text(angle = 270, face = "bold"),
-          strip.placement = "outside")
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
 
   ggarrange(ggarrange(jfdi.fig04.a,
                       jfdi.fig04.b,
@@ -250,30 +295,42 @@ do.fig05 <- function(){
   jfdi.fig.05.a <- jfdi.concord.combined %>%
     filter(contrived_source == "Horizon") %>%
     rename(Grouping=comparison) %>%
-    ggline(x="expected_af", y="rc", color="Grouping",
-           palette="jco",
+    ggline(x="expected_af", y="rc", color="black",
+           linetype="Grouping",
+           repel=TRUE,
            facet.by=c("dna_source", "participant.a"),
-           ggtheme=theme_pubclean(base_size=8),
+           ggtheme=theme_pubclean(base_size=BaseSize),
+           point.size=PointSize,
+           shape="Grouping",
+           size=0.3,
            add="mean_se",
            ylab="Concordance",
            xlab=FALSE) +
-    theme(panel.grid = element_blank(),
-          strip.text.y = element_text(angle = 270, face = "bold"),
-          strip.placement = "outside")
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
 
   jfdi.fig.05.b <- jfdi.concord.combined %>%
     filter(contrived_source == "SeraCare") %>%
     rename(Grouping=comparison) %>%
-    ggline(x="expected_af", y="rc", color="Grouping",
-           palette="jco",
+    ggline(x="expected_af", y="rc", color="black",
+           linetype="Grouping",
            facet.by=c("dna_source", "participant.a"),
-           ggtheme=theme_pubclean(base_size=8),
+           ggtheme=theme_pubclean(base_size=BaseSize),
+           point.size=PointSize,
+           shape="Grouping",
+           repel=TRUE,
+           size=0.3,
            add="mean_se",
            ylab="Concordance",
            xlab=FALSE) +
-    theme(panel.grid = element_blank(),
-          strip.text.y = element_text(angle = 270, face = "bold"),
-          strip.placement = "outside")
+    theme(strip.text = element_text(face = "bold"),
+          strip.placement = "outside",
+          strip.background=element_rect(color=NULL, fill="white"),
+          legend.key.width=unit(.25, "cm"),
+          legend.key.height=unit(.25, "cm"))
 
   ggarrange(ggarrange(jfdi.fig.05.a),
             ggarrange(jfdi.fig.05.b),
@@ -285,33 +342,45 @@ do.fig05 <- function(){
 
 # Stop pesky Rplots.pdf from being generated
 if(!interactive()) pdf(NULL)
-message("Creating figures/jfdi.fig02.png ...")
+message("Creating figures/jfdi.fig02.jpeg ...")
 jfdi.fig02 <- do.fig02()
-ggsave("jfdi.fig02.png",
+ggsave("jfdi.fig02.jpeg",
        plot=jfdi.fig02,
        path="figures",
-       width=6, height=4, scale=1.4)
+       width=8,
+       height=8,
+       units="cm",
+       dpi=300)
 
-message("Creating figures/jfdi.fig03.png ...")
+message("Creating figures/jfdi.fig03.jpeg ...")
 jfdi.fig03 <- do.fig03()
-ggsave("jfdi.fig03.png",
+ggsave("jfdi.fig03.jpeg",
        plot=jfdi.fig03,
        path="figures",
-       width=6, height=4, scale=1.4)
+       width=17,
+       height=10,
+       units="cm",
+       dpi=300)
 
-message("Creating figures/jfdi.fig04.png ...")
+message("Creating figures/jfdi.fig04.jpeg ...")
 jfdi.fig04 <- do.fig04()
-ggsave("jfdi.fig04.png",
+ggsave("jfdi.fig04.jpeg",
        plot=jfdi.fig04,
        path="figures",
-       width=6, height=4, scale=1.4)
+       width=17,
+       height=10,
+       units="cm",
+       dpi=300)
 
-message("Creating figures/jfdi.fig05.png ...")
+message("Creating figures/jfdi.fig05.jpeg ...")
 jfdi.fig05 <- do.fig05()
-ggsave("jfdi.fig05.png",
+ggsave("jfdi.fig05.jpeg",
        plot=jfdi.fig05,
        path="figures",
-       width=6, height=4, scale=1.4)
+       width=17,
+       height=10,
+       units="cm",
+       dpi=300)
 message("All figures generated.")
 
 message("Creating csvs/jfdi.table_S3.csv ...")
