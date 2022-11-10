@@ -1,13 +1,17 @@
 # bpa-jfdi-p2-publication
 
-This repository contains scripts and documentation associated with the publication:
+This repository contains scripts and documentation associated with the publication (current in review):
 
 > Hernandez, K.M., Bramlett, K., Agius, P., ..., and Leiman, L.C. 2022. Contrived materials and a dataset for the evaluation of liquid biopsy tests: A Blood Profiling Atlas in Cancer (BLOODPAC) community study
 
 ## The datasets
 
 Results from the manuscript can be reproduced from a single CSV file that is registered to the [BLOODPAC Data Commons](https://data.bloodpac.org/).
-The GUID for this file is `dg.5B0D/b47b8599-1488-49d1-9047-d5b3cc661806`. (_TODO: Add in discovery page permalink and instructions_).
+The GUID for this file is `dg.5B0D/b47b8599-1488-49d1-9047-d5b3cc661806`. However, the simplest way to access the dataset is to use the
+permalink: [https://data.bloodpac.org/discovery/JFDI_P2/](https://data.bloodpac.org/discovery/JFDI_P2/). This page contains
+metadata about the publication and at the bottom contains a direct download link. These data are publicly available and open
+access so you do not need to be logged in for access. For any help with downloading the file from the BLOODPAC Data Commons,
+there is an "Email Support" link at the top of the commons website.
 
 ## Analysis
 
